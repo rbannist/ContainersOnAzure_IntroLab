@@ -9,6 +9,7 @@ This intro lab serves to guide you on a few ways you can deploy a container on A
 *	Deploy a container on an Azure Container Instance (managed Kubernetes instance)
 *	Deploy an unmanaged Kubernetes cluster on Azure using Azure Container Service (ACS) and deploy our container onto it
 * Deploy the ACS Connector to a Kubernetes cluster and use it to manage Azure Container Service instances
+*	Deploy a managed Kubernetes cluster on Azure using Azure Kontainer Service (AKS) and deploy our container onto it
 * Write to Azure Cosmos DB. [Cosmos DB](https://azure.microsoft.com/en-us/services/cosmos-db/) is Microsoft's globally distributed, multi-model database 
 * Use [Application Insights](https://azure.microsoft.com/en-us/services/application-insights/) to track custom events in the container
 * Deploy Helm and Draft to your Kubernetes cluster
@@ -34,7 +35,10 @@ az account set --subscription "<your requried subscription guid>"
 
 ## 1. Provisioning a Cosmos DB instance
 
-Let's start by creating a Cosmos DB instance in the portal, this is a quick process. Navigate to the Azure portal and create a new Azure Cosmos DB instance, enter the following parameters:
+Let's start by creating a Cosmos DB instance in the portal or using CLI, this is a quick process.
+
+### PORTAL:
+Navigate to the Azure portal and create a new Azure Cosmos DB instance, enter the following parameters:
 
 * ID: <yourdbinstance>
 * API: Select MongoDB as the API as our container API will use this driver
@@ -44,9 +48,30 @@ Let's start by creating a Cosmos DB instance in the portal, this is a quick proc
 See below:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/CosmosDB.png)
 
+
 Once the DB is provisioned, we need to get the Database Username and Password, these may be found in the Settings --> Connection Strings section of your DB. We will need these to run our container, so copy them for convenient access. See below:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/DBKeys.png)
+
+
+### CLI:
+
+...
+az group create -n <yourresourcegroup> -l westeurope
+...
+
+...
+az cosmosdb create -n <yourcosmosdb> -g <yourresourcegroup> --kind MongoDB
+...
+
+...
+az cosmosdb list-connection-strings -n <yourcosmosdb> -g <yourresourcegroup>
+...
+-->  Store the output in a txt file for later use
+
+(az cosmosdb list-keys -n arc-we-coa-cdb01 -g arc-we-coa-rg01 = grab the keys in isolation)
+
+
 
 ## 2. Provisioning an Application Insights instance
 
