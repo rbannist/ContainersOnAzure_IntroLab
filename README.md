@@ -56,20 +56,20 @@ Once the DB is provisioned, we need to get the Database Username and Password, t
 
 ### CLI:
 
-...
+```
 az group create -n <yourresourcegroup> -l westeurope
-...
+```
 
-...
+```
 az cosmosdb create -n <yourcosmosdb> -g <yourresourcegroup> --kind MongoDB
-...
+```
 
-...
+```
 az cosmosdb list-connection-strings -n <yourcosmosdb> -g <yourresourcegroup>
-...
+```
 -->  Store the output in a txt file for later use
 
-(az cosmosdb list-keys -n arc-we-coa-cdb01 -g arc-we-coa-rg01 = grab the keys in isolation)
+(az cosmosdb list-keys -n <yourcosmosdb> -g <yourresourcegroup> = grab the keys in isolation from the full connection string)
 
 
 
