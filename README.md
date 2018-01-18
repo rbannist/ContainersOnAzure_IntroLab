@@ -37,7 +37,7 @@ az account set --subscription "<your requried subscription guid>"
 
 Let's start by creating a Cosmos DB instance in the portal or using CLI, this is a quick process.
 
-### PORTAL:
+### Portal:
 Navigate to the Azure portal and create a new Azure Cosmos DB instance, enter the following parameters:
 
 * ID: <yourdbinstance>
@@ -61,15 +61,16 @@ az group create -n <yourresourcegroup> -l westeurope
 ```
 
 ```
-az cosmosdb create -n <yourcosmosdb> -g <yourresourcegroup> --kind MongoDB
+az cosmosdb create -n <yourcosmosdbid> -g <yourresourcegroup> --kind MongoDB
 ```
 
 ```
-az cosmosdb list-connection-strings -n <yourcosmosdb> -g <yourresourcegroup>
+az cosmosdb list-connection-strings -n <yourcosmosdbid> -g <yourresourcegroup>
 ```
 -->  Store the output in a txt file for later use
 
-(az cosmosdb list-keys -n <yourcosmosdb> -g <yourresourcegroup> = grab the keys in isolation from the full connection string)
+(az cosmosdb list-keys -n <yourcosmosdbid> -g <yourresourcegroup> = grab the keys in isolation from the full connection string)
+
 
 
 
@@ -93,6 +94,8 @@ Once Application Insights is provisioned, we need to get the Instrumentation key
 
 If you would like an example of how to setup an [Azure Container Registry](https://azure.microsoft.com/en-us/services/container-registry/) instance via ARM, have a look [here](https://github.com/shanepeckham/CADScenario_Recommendations)
 
+### Portal:
+
 Navigate to the Azure Portal and select create new Azure Container Registry, enter the following parameters:
 
 * Registry Name: <yourcontainerregistryinstance>
@@ -104,6 +107,25 @@ Navigate to the Azure Portal and select create new Azure Container Registry, ent
 
 See below:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/ContainerRegistry.png)
+
+
+### CLI:
+
+```
+az acr create -n <youracrname> -g <yourresourcegroup> --sku Basic --admin-enabled true -l westeurope
+```
+
+```
+az ad sp create-for-rbac --scopes /subscriptions/<yoursubsriptionid>/resourceGroups/<yourresourcegroup>/providers/Microsoft.ContainerRegistry/registries/<youracrname> --role Owner --password <youracrpassword>
+```
+
+```
+az acr show -n <youracrname> --query loginServer
+```
+
+-->  Save the ouput for later
+
+
 
 ## 4. Pull the container to your environment and set the environment keys
 
