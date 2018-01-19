@@ -1,6 +1,6 @@
 # Intro to Containers on Azure
 This lab aims to show a few ways you can quickly deploy container workloads to Azure. 
-
+<br><br>
 # What is it?
 
 This intro lab serves to guide you on a few ways you can deploy a container on Azure, namely:
@@ -12,11 +12,11 @@ This intro lab serves to guide you on a few ways you can deploy a container on A
 * Write to Azure Cosmos DB. [Cosmos DB](https://azure.microsoft.com/en-us/services/cosmos-db/) is Microsoft's globally distributed, multi-model database 
 * Use [Application Insights](https://azure.microsoft.com/en-us/services/application-insights/) to track custom events in the container
 * Deploy Helm to your Kubernetes cluster
-
+<br><br>
 # Technology used
 
 * Our container contains a swagger enabled API developed in Go which writes a simple order via json to your specified Cosmos DB and tracks custom events via Application Insights.
-
+<br><br>
 # Preparing for this lab
 
 For this Lab you will require:
@@ -31,7 +31,7 @@ When using the Azure CLI, after logging in, if you have more than one subscripto
 ```
 az account set --subscription "<your requried subscription guid>"
 ```
-
+<br><br>
 ## 1. Provisioning a Cosmos DB instance
 
 Let's start by creating a Cosmos DB instance in the portal or using CLI, this is a quick process.
@@ -67,16 +67,13 @@ az cosmosdb create -n <yourcosmosdbid> -g <yourresourcegroup> --kind MongoDB
 az cosmosdb list-connection-strings -n <yourcosmosdbid> -g <yourresourcegroup>
 ```
 -->  Store the output in a text file for later use.
-
-
-If you wish to see the keys in isolation
+<br><br>
+If you wish to see the keys in isolation:
 
 ```
 az cosmosdb list-keys -n <yourcosmosdbid> -g <yourresourcegroup>
 ```
-
-
-
+<br><br>
 ## 2. Provisioning an Application Insights instance
 
 In the Azure portal, select create new Application Insights instance, enter the following parameters:
@@ -92,8 +89,7 @@ See below:
 Once Application Insights is provisioned, we need to get the Instrumentation key, this may be found in the Overview section. We will need this to run our container, so copy it for convenient access. See below:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/AppKey.png)
-
-
+<br><br>
 ## 3. Provisioning an Azure Container Registry instance
 
 If you would like an example of how to setup an [Azure Container Registry](https://azure.microsoft.com/en-us/services/container-registry/) instance via ARM, have a look [here](https://github.com/shanepeckham/CADScenario_Recommendations)
@@ -128,9 +124,7 @@ az acr show -n <youracrname> --query loginServer
 ```
 
 -->  Save the ouput in the text file for later use.
-
-
-
+<br><br>
 ## 4. Pull the container to your environment and set the environment keys
 
 Open up your docker machine in Guacamole and type the following:
@@ -183,8 +177,7 @@ Then send a POST call:
 ```
 curl -X POST "http://<dockervmipaddress>:8080/v1/order/" -H  "accept: application/json" -H  "content-type: application/json" -d "{  \"EmailAddress\": \"<emailaddress<>\",  \"ID\": \"string\",  \"PreferredLanguage\": \"ENU\",  \"Product\": \"Latte\",  \"Source\": \"Localhost\",  \"Total\": 1}"
 ```
-
-
+<br><br>
 We can now go and query CosmosDB to check our entry there, in the Azure portal, navigate back to your Cosmos DB instance and go to the section Data Explorer. We can now query for the order(s) that we placed. A collection called 'orders' will have been created within your database, you can then apply a filter for the id we created, namely:
 
 ```
@@ -194,8 +187,7 @@ We can now go and query CosmosDB to check our entry there, in the Azure portal, 
 See below:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/CosmosQuery.png)
-
-
+<br><br>
 ## 5. Retag the image and upload it your private Azure Container Registry
 
 Navigate to the Azure Container Registry instance you provisioned within the Azure portal. Click on the *Quick Start* blade, this will provide you with the relevant commands to upload a container image to your registry, see below:
@@ -220,8 +212,7 @@ docker push <yourcontainerregistryinstance>.azurecr.io/go_order_sb
 Once this has completed, you will be able to see your container uploaded to the Container Registry within the portal, see below:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/registryrepo.png)
-
-
+<br><br>
 ## 6. Deploy the container to App Services
 
 We will now deploy the container to Azure App Services via the Azure CLI. If you would like an example of how to setup an [App Service Application](https://docs.microsoft.com/en-us/azure/app-service-web/app-service-linux-intro) instance via ARM and associate the container with your Azure Container Registry, have a look [here](https://github.com/shanepeckham/CADScenario_Recommendations)
@@ -275,7 +266,7 @@ Ensure you add ```/swagger``` on to the end of the URL to access the Swagger API
 ### Stream the logs from the App Service container
 
 To see the log stream of your container running in the web app, navigate to: ```https://<youruniquewebappname>.scm.azurewebsites.net/api/logstream```
-
+<br><br>
 ## 7. Deploy the container to Azure Container Instance
 
 Now we will deploy our container to [Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/). 
