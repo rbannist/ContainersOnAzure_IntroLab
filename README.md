@@ -8,11 +8,10 @@ This intro lab serves to guide you on a few ways you can deploy a container on A
 *	Deploy a container on App Service PaaS platform
 *	Deploy a container on an Azure Container Instance (managed Kubernetes instance)
 *	Deploy an unmanaged Kubernetes cluster on Azure using Azure Container Service (ACS) and deploy our container onto it
-* Deploy the ACS Connector to a Kubernetes cluster and use it to manage Azure Container Service instances
 *	Deploy a managed Kubernetes cluster on Azure using Azure Kontainer Service (AKS) and deploy our container onto it
 * Write to Azure Cosmos DB. [Cosmos DB](https://azure.microsoft.com/en-us/services/cosmos-db/) is Microsoft's globally distributed, multi-model database 
 * Use [Application Insights](https://azure.microsoft.com/en-us/services/application-insights/) to track custom events in the container
-* Deploy Helm and Draft to your Kubernetes cluster
+* Deploy Helm to your Kubernetes cluster
 
 # Technology used
 
@@ -43,7 +42,7 @@ Navigate to the Azure portal and create a new Azure Cosmos DB instance, enter th
 * ID: <yourdbinstance>
 * API: Select MongoDB as the API as our container API will use this driver
 * ResourceGroup: <yourresourcegroup>
-* Location: <yourlocation>
+* Location: westeurope
 
 See below:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/CosmosDB.png)
@@ -67,10 +66,14 @@ az cosmosdb create -n <yourcosmosdbid> -g <yourresourcegroup> --kind MongoDB
 ```
 az cosmosdb list-connection-strings -n <yourcosmosdbid> -g <yourresourcegroup>
 ```
--->  Store the output in a txt file for later use
+-->  Store the output in a text file for later use.
 
-(az cosmosdb list-keys -n <yourcosmosdbid> -g <yourresourcegroup> = grab the keys in isolation from the full connection string)
 
+If you wish to see the keys in isolation
+
+```
+az cosmosdb list-keys -n <yourcosmosdbid> -g <yourresourcegroup>
+```
 
 
 
@@ -81,7 +84,7 @@ In the Azure portal, select create new Application Insights instance, enter the 
 * Name: <yourappinsightsinstance>
 * Application Type: General
 * ResourceGroup: <yourresourcegroup>
-* Location: <yourlocation>
+* Location: westeurope
 
 See below:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/ApplicationInsights.png)
@@ -89,6 +92,7 @@ See below:
 Once Application Insights is provisioned, we need to get the Instrumentation key, this may be found in the Overview section. We will need this to run our container, so copy it for convenient access. See below:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/AppKey.png)
+
 
 ## 3. Provisioning an Azure Container Registry instance
 
@@ -100,10 +104,10 @@ Navigate to the Azure Portal and select create new Azure Container Registry, ent
 
 * Registry Name: <yourcontainerregistryinstance>
 * ResourceGroup: <yourresourcegroup>
-* Location: <yourlocation>
+* Location: westeurope
 * Admin User: Enable
-* SKU: Classic
-* Storage Account: Select the default value provided
+* SKU: Basic or Classic
+* Storage Account: Select the default value provided (if Classic)
 
 See below:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/ContainerRegistry.png)
@@ -116,20 +120,20 @@ az acr create -n <youracrname> -g <yourresourcegroup> --sku Basic --admin-enable
 ```
 
 ```
-az ad sp create-for-rbac --scopes /subscriptions/<yoursubsriptionid>/resourceGroups/<yourresourcegroup>/providers/Microsoft.ContainerRegistry/registries/<youracrname> --role Owner --password <youracrpassword>
+az ad sp create-for-rbac --scopes /subscriptions/<yoursubsriptionid>/resourceGroups/<yourresourcegroup>/providers/Microsoft.ContainerRegistry/registries/<youracrname> --role Owner --password <yourpassword>
 ```
 
 ```
 az acr show -n <youracrname> --query loginServer
 ```
 
--->  Save the ouput for later
+-->  Save the ouput in the text file for later use.
 
 
 
 ## 4. Pull the container to your environment and set the environment keys
 
-Open up your docker command window (if using Windows open it with elevated privileges) and type the following:
+Open up your docker machine in Guacamole and type the following:
 
 ``` 
 docker pull shanepeckham/go_order_sb
@@ -141,32 +145,56 @@ The environment keys that need to be set are as follows:
 * DATABASE: <your cosmodb username from step 1>
 * PASSWORD: <your cosmodb password from step 1>
 * INSIGHTSKEY: <you app insights key from step 2>
-* SOURCE: This is a free text field which we will use specify where we are running the container from. I use the values localhost, AppService, ACI and K8 for my tests
+* SOURCE: This is a free text field which we will use specify where we are running the container from. The values 'Localhost', 'AppService', 'ACI' and 'K8' are applicable to our tests.
 
-So to run the container on your local machine, enter the following command, substituting your environment variable values (if you are running Docker on Windows, omit the 'sudo'):
+So, to run the container on your local machine, enter the following command, substituting your environment variable values:
 
 ```
-sudo docker run --name go_order_sb -p 8080:8080 -e DATABASE="<your cosmodb username from step 1>" -e PASSWORD="<your cosmodb password from step 1>" -e INSIGHTSKEY="<you app insights key from step 2>" -e SOURCE="localhost"  --rm -i -t shanepeckham/go_order_sb
+sudo docker run --name go_order_sb -p 8080:8080 --network=host -e DATABASE="<your cosmodb username from step 1>" -e PASSWORD="<your cosmodb password from step 1>" -e INSIGHTSKEY="<you app insights key from step 2>" -e SOURCE="localhost"  -i -t shanepeckham/go_order_sb
 ```
-Note, the application runs on port 8080 which we will bind to the host as well. If you are running on Windows, select 'Allow Access' on Windows Firewall.
+Note, the application runs on port 8080 which we will bind to the host as well (-p switch).  However, we're running the container directly on the 'host network' as well in his example (172.31.0.0/24) in order to access it from the neighbouring windows machine(s).
 
-If all goes well, you should see the application running on localhost:8080, see below:
+If you wish to explore docker host's networks enter the following commands
+
+```
+sudo docker network ls
+
+sudo docker network inspect <bridgenetworkid> | <hostnetworkid>
+```
+
+If all goes well, you should see the application running on <dockervmipaddress>:8080.  'ifconfig -a' on the Docker VM will give you the IP address that you need.  See below for an example:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/localrun.png)
 
-Now you can navigate to localhost:8080/swagger and test the api. Select the 'POST' /order/ section, select the button "Try it out" and enter some values in the json provided and select "Execute", see below:
+Now you can navigate to <dockervmipaddress>:8080/swagger and test the api. Select the 'POST' /order/ section, select the button "Try it out" and enter some values in the json provided and select "Execute", see below:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/swagger.png)
 
 If the request succeeded, you will get a CosmosDB Id returned for the order you have just placed, see below:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/swaggerresponse.png)
 
-We can now go and query CosmosDB to check our entry there, in the Azure portal, navigate back to your Cosmos DB instance and go to the section Data Explorer (note, at the time of writing this is in preview so is subject to change). We can now query for the order we placed. A collection called 'orders' will have been created within your database, you can then apply a filter for the id we created, namely:
+
+You can also test using CURL on the Mgmt/Windows VM.  Firsty, install CURL:
 
 ```
-{"id":"5995b963134e4f007bc45447"}
+choco install curl -y
 ```
+
+Then send a POST call:
+
+```
+curl -X POST "http://<dockervmipaddress>:8080/v1/order/" -H  "accept: application/json" -H  "content-type: application/json" -d "{  \"EmailAddress\": \"<emailaddress<>\",  \"ID\": \"string\",  \"PreferredLanguage\": \"ENU\",  \"Product\": \"Latte\",  \"Source\": \"Localhost\",  \"Total\": 1}"
+```
+
+
+We can now go and query CosmosDB to check our entry there, in the Azure portal, navigate back to your Cosmos DB instance and go to the section Data Explorer. We can now query for the order(s) that we placed. A collection called 'orders' will have been created within your database, you can then apply a filter for the id we created, namely:
+
+```
+{"id":"<orderid>"}
+```
+
 See below:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/CosmosQuery.png)
+
 
 ## 5. Retag the image and upload it your private Azure Container Registry
 
@@ -178,7 +206,6 @@ Now we will push the image up to the Azure Container Registry, enter the followi
 
 ``` 
 docker login <yourcontainerregistryinstance>.azurecr.io
-
 ```
 
 To get the username and password, navigate to the *Access Keys* blade, see below:
@@ -194,6 +221,7 @@ Once this has completed, you will be able to see your container uploaded to the 
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/registryrepo.png)
 
+
 ## 6. Deploy the container to App Services
 
 We will now deploy the container to Azure App Services via the Azure CLI. If you would like an example of how to setup an [App Service Application](https://docs.microsoft.com/en-us/azure/app-service-web/app-service-linux-intro) instance via ARM and associate the container with your Azure Container Registry, have a look [here](https://github.com/shanepeckham/CADScenario_Recommendations)
@@ -207,22 +235,14 @@ az appservice plan create -g <yourresourcegroup> -n <yourappserviceplan> --is-li
 Upon receiving the 'provisioningState': 'Succeeded' json response, enter the following to create your app which will run our API:
 
 ```
-az webapp create -n <your unique web app name> -p <yourappserviceplan> -g <yourresourcegroup> --deployment-container-image-name <yourcontainerregistryinstance>.azurecr.io/go_order_sb
+az webapp create -n <youruniquewebappname> -p <yourappserviceplan> -g <yourresourcegroup> --deployment-container-image-name <yourcontainerregistryinstance>.azurecr.io/go_order_sb
 ```
 
-If you are not using the latest Azure CLI version, you may need to use the following alternative syntax:
 
-```az appservice web create -n <your unique web app name> -p <yourappserviceplan> -g <yourresourcegroup>```
-
-
-Upon receiving the successful completion json response, we will now associate our container from our private Azure Registry to the App Service App, type the following (if you are using PowerShell on Windows, you may need to remove any line breaks and continue on a single line):
+Upon receiving the successful completion json response, we will now associate our container from our private Azure Registry to the App Service App, type the following):
 
 ```
-az webapp config container set -n <your unique web app name> -g <yourresourcegroup>
---docker-custom-image-name <yourcontainerregistryinstance>.azurecr.io/go_order_sb:latest
---docker-registry-server-url https://<yourcontainerregistryinstance>.azurecr.io
---docker-registry-server-user <your acr admin username>
---docker-registry-server-password <your acr admin password>
+az webapp config container set -n <youruniquewebappname> -g <yourresourcegroup> --docker-custom-image-name <yourcontainerregistryinstance>.azurecr.io/go_order_sb:latest --docker-registry-server-url https://<yourcontainerregistryinstance>.azurecr.io --docker-registry-server-user <your acr admin username> --docker-registry-server-password <your acr admin password>
 ```
 
 ### Associate the environment variables with API App
@@ -233,21 +253,28 @@ The environment keys that need to be set are as follows:
 * DATABASE: <your cosmodb username from step 1>
 * PASSWORD: <your cosmodb password from step 1>
 * INSIGHTSKEY: <you app insights key from step 2>
-* SOURCE: This is a free text field which we will use specify where we are running the container from. I use the values localhost, AppService, ACI and K8 for my tests
+* SOURCE: This is a free text field which we will use specify where we are running the container from.
 * WEBSITES_PORT: 8080 
 
 See below:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/AppSettingsWeb.png)
 
-Now we can test our app service container, navigate to the Overview section to get the URL for your API, see below:
+Or, when using Azure CLI:
+
+```
+az webapp config appsettings set -n <youruniquewebappname> -g <yourresourcegroup> --settings "DATABASE=<your cosmodb username from step 1>" "PASSWORD=<your cosmodb password from step 1>" "INSIGHTSKEY=<you app insights key from step 2>" "SOURCE=AppServices" "WEBSITES_PORT=8080"
+```
+
+Now we can test our app service container, the URL should be https://<youruniquewebappname>.azurewebsites.net/swagger but you can also navigate to the Overview section to get the URL for your API, see below:
 
 ![alt text](https://github.com/shanepeckham/CADLab_Loyalty/blob/master/Images/App_URI.png)
 
 Ensure you add ```/swagger``` on to the end of the URL to access the Swagger API test harness.
 
+
 ### Stream the logs from the App Service container
 
-To see the log stream of your container running in the web app, navigate to: ```https://<yourwebsitename>.scm.azurewebsites.net/api/logstream```
+To see the log stream of your container running in the web app, navigate to: ```https://<youruniquewebappname>.scm.azurewebsites.net/api/logstream```
 
 ## 7. Deploy the container to Azure Container Instance
 
@@ -325,7 +352,7 @@ Here we will deploy a Kubernetes cluster quickly using the [Azure Container Engi
 We will start by once again creating a resource group for our cluster using the az CLI and the acs engine, in a command window enter the following:
 
 ```
-az group create --name <yourresourcegroupk8> --location <yourlocation>
+az group create --name <yourresourcegroupk8> --location westeurope
 ```
 
 Upon receiving your "provisioningState": "Succeeded" json response, enter the following:
