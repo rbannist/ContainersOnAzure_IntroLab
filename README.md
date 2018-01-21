@@ -7,8 +7,7 @@ This intro lab serves to guide you on a few ways you can deploy a container on A
 
 *	Deploy a container on App Service PaaS platform
 *	Deploy a container on an Azure Container Instance (managed Kubernetes instance)
-*	Deploy an unmanaged Kubernetes cluster on Azure using Azure Container Service (ACS) and deploy our container onto it
-*	Deploy a managed Kubernetes cluster on Azure using Azure Kontainer Service (AKS) and deploy our container onto it
+*	Deploy a managed Kubernetes cluster on Azure using Azure Kubernetes Service (AKS) and deploy our container onto it
 * Write to Azure Cosmos DB. [Cosmos DB](https://azure.microsoft.com/en-us/services/cosmos-db/) is Microsoft's globally distributed, multi-model database 
 * Use [Application Insights](https://azure.microsoft.com/en-us/services/application-insights/) to track custom events in the container
 * Deploy Helm to your Kubernetes cluster
@@ -129,7 +128,7 @@ az acr show -n <youracrname> --query loginServer
 
 Open up your docker machine in Guacamole and type the following:
 
-``` 
+```
 docker pull shanepeckham/go_order_sb
 ```
 
@@ -146,7 +145,7 @@ So, to run the container on your local machine, enter the following command, sub
 ```
 sudo docker run --name go_order_sb -p 8080:8080 --network=host -e DATABASE="<your cosmodb username from step 1>" -e PASSWORD="<your cosmodb password from step 1>" -e INSIGHTSKEY="<you app insights key from step 2>" -e SOURCE="localhost"  -i -t shanepeckham/go_order_sb
 ```
-Note, the application runs on port 8080 which we will bind to the host as well (-p switch).  However, we're running the container directly on the 'host network' as well in his example (172.31.0.0/24) in order to access it from the neighbouring windows machine(s).
+Note, the application runs on port 8080 which we will bind to the host as well (-p switch).  However, we're running the container directly on the 'host network' as well in this example (i.e. on 172.31.0.0/24) in order to access it from the neighbouring windows machine(s).
 
 If you wish to explore docker host's networks enter the following commands
 
@@ -281,7 +280,7 @@ az group create --name <yourACIresourcegroup> --location <westeurope, eastus, we
 
 ### Associate the environment variables with Azure Container Instance
 
-We will now deploy our container instance via an ARM template, which is [here](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/azuredeploy.json) but before we do, we need to edit this document to ensure we set our environment variables.
+We will now deploy our container instance via an ARM template, which is [here](https://github.com/rbannist/ContainersOnAzure_MiniLab/blob/master/azuredeploy.json) but before we do, we need to edit this document to ensure we set our environment variables.
 
 
 In the document, the following section needs to be amended, adding your environment keys like you did before:
@@ -335,16 +334,67 @@ az container show -n go-order-sb -g <yourACIresourcegroup> -o table
 ```
 
 Once the container has moved to "Succeeded" state you will see your external IP address under the "IP:ports" column, copy this value and navigate to http://yourACIExternalIP:8080/swagger and test your API like before.
+<br><br>
+## 8. Deploy the container to an Azure Kubernetes Service cluster
 
-## 8. Deploy the container to an Azure Container Instance provisioned Kubernetes cluster
+Here we will deploy an Azure Kubernetes Service (AKS) cluster which is a managed Kubernetes environment in Azure.  We will then run the container on the cluster.  Please use the Cloud Shell due to a bug in Azure-CLI version installed on your Windows VM.
 
-Here we will deploy a Kubernetes cluster quickly using the [Azure Container Engine](https://azure.microsoft.com/en-us/services/container-service/). Note, the approach below will control all aspects of your Kubernetes setup and is intended for quick provisioning, for more control on the implementation look at the [following](https://github.com/Azure/acs-engine/blob/master/docs/acsengine.md). 
-
-We will start by once again creating a resource group for our cluster using the az CLI and the acs engine, in a command window enter the following:
+We will start by once again creating a resource group for our cluster.  In a command window enter the following:
 
 ```
 az group create --name <yourresourcegroupk8> --location westeurope
 ```
+
+az aks create -n arc-we-coa-k8s01 -g arc-we-coa-rg02
+
+az aks get-credentials --resource-group arc-we-coa-rg02 --name arc-we-coa-k8s01
+
+kubectl get nodes
+
+touch goordersb.yaml
+
+nano goordersb.yaml
+
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: goordersb
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: goordersb
+    spec:
+      containers:
+      - name: goordersb
+        image: arcwecoaacr01.azurecr.io/go_order_sb
+        ports:
+        - containerPort: 8080
+          name: goordersb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: goordersb
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+  selector:
+    app: goordersb
+---
+
+
+kubectl create secret docker-registry arcwecoaacr01.azurecr.io --docker-server=arcwecoaacr01.azurecr.io --docker-username=arcwecoaacr01 --docker-password=CUI32Wd=lbr+8D5nIbflfCop73ZZX+b6 --docker-email=barichar@microsoft.com
+
+kubectl create -f goordersb.yaml
+
+kubectl get service goordersb --watch
+--> Wait for 'EXTERNAL-IP'
+
+
+
 
 Upon receiving your "provisioningState": "Succeeded" json response, enter the following:
 
@@ -380,12 +430,14 @@ Note, it is always a good idea to apply an auto shutdown policy to your VMs to a
 We now want to register our private Azure Container Registry with our Kubernetes cluster to ensure that we can pull images from it. Enter the following within your command window:
 
 ```
-kubectl create secret docker-registry <yourcontainerregistryinstance> --docker-server=<yourcontainerregistryinstance>.azurecr.io --docker-username=<your acr admin username> --docker-password=<your acr admin password> --docker-email=<youremailaddress.com>
+kubectl create secret docker-registry <yourcontainerregistryinstance>.azurecr.io --docker-server=<yourcontainerregistryinstance>.azurecr.io --docker-username=<youracradminusername> --docker-password=<youracradminpassword> --docker-email=<youremailaddress>
 ```
 
 In the Kubernetes dashboard you should now see this created within the secrets section:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/K8secrets.png)
+
+
 
 ### Associate the environment variables with container we want to deploy to Kubernetes
 
@@ -432,7 +484,7 @@ You should get a success message that a deployment and service has been created.
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/images/k8service.png)
 
 You can now navigate to http://k8serviceendpoint:8080/swagger and test your API
-
+<br><br>
 ## 8. Deploy the container to an Azure Container Engine and manage it from within your Kubernetes cluster
 
 Now we will deploy our container to Azure Container Instances and use the [ACI connector](https://github.com/azure/aci-connector-k8s) to manage it from within our Kubernetes cluster.
@@ -467,7 +519,7 @@ After one or a few attempts, you should see the following json structure being o
 
 #### Install the ACI Connector
 
-Edit the [aci_connector_go_order_sb.yaml](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/aci_connector_go_order_sb.yaml) and input environment variables using the values above:
+Edit the [aci_connector_go_order_sb.yaml](https://github.com/rbannist/ContainersOnAzure_MiniLab/blob/master/aci_connector_go_order_sb.yaml) and input environment variables using the values above:
 
 * AZURE_CLIENT_ID: insert appId
 * AZURE_CLIENT_KEY: insert password
@@ -493,7 +545,7 @@ You should now the see the ACI Connector running within your Kubernetes cluster,
 
 ### Deploy the container to Azure Container Instance managed by Kubernetes and set environment variables
 
-We will now deploy our container via a yaml file again, which is [here](https://github.com/shanepeckham/ContainersOnAzure_MiniLab/blob/master/go_order_sb_aci_node.yaml) but before we do, we need to edit this file to ensure we set our environment variables.
+We will now deploy our container via a yaml file again, which is [here](https://github.com/rbannist/ContainersOnAzure_MiniLab/blob/master/go_order_sb_aci_node.yaml) but before we do, we need to edit this file to ensure we set our environment variables.
 
 Now we want to add the environment variables and ensure that you have set your private Azure Container Registry correctly:
 ```
@@ -532,7 +584,7 @@ Click on the ACI Connector pod, mark down the IP address, and navigate to the fo
 http://<your_ACI_Connector_pod_IP_address>:8080/swagger
 ```
 
- ### Deploy Helm and Draft to your Kubernetes cluster
+ ### Deploy Helm to your Kubernetes cluster
  Firstly, download [Helm](https://github.com/kubernetes/helm/releases/tag/v2.5.1), unpack it and place it within your PATH, or ammend your path environment variable to include the location of the helm binary.
 
  Initialise the helm configuration with
@@ -560,70 +612,6 @@ ingress-traefik   10.0.98.22   23.101.66.197   80:31765/TCP,443:31391/TCP   10h
 kubernetes        10.0.0.1     <none>          443/TCP                      13h
 ```
 
-Usually, it would be down to the owner of the Kubernetes and Helm installation to ammend their DNS zone to allow applications to be published in a catchall domain.
-
-For the purpose of this workshop, let the moderator know the IP address of your ingress controller, and they will create the associated A record
-
-```
-az network dns record-set a add-record --ipv4-address 23.101.66.197 --record-set-name 'apps' -g inklin -z inkl.in
-```
-
-Once DNS record has been created for the ingress controller, you will then need to install [Draft](https://azuredraft.blob.core.windows.net/draft/draft-canary-linux-amd64.tar.gz) and initialise the Draft environment
-
-```
-helm init
-Creating /home/justin/.draft
-Creating /home/justin/.draft/plugins
-Creating /home/justin/.draft/packs
-Creating pack python...
-Creating pack php...
-Creating pack ruby...
-Creating pack csharp...
-Creating pack gradle...
-Creating pack javascript...
-Creating pack maven pom...
-Creating pack go...
-$DRAFT_HOME has been configured at /home/justin/.draft.
-
-In order to install Draft, we need a bit more information...
-
-1. Enter your Docker registry URL (e.g. docker.io/myuser, quay.io/myuser, myregistry.azurecr.io): inklin.azurecr.io
-2. Enter your username: inklin
-3. Enter your password: 
-4. Enter your top-level domain for ingress (e.g. draft.example.com): apps.inkl.in
-Draft has been installed into your Kubernetes Cluster.
-Happy Sailing!
-```
-
-Now that Draft has been initialised, you are ready to start working on your first app.
-
-The Azure Draft team has published a number of example bootstraps for popular languages [here](https://github.com/Azure/draft/tree/master/examples).  Download the language example you wish to use, and then initialise the Draft environment to continue working.
-
-```
-draft create
---> Draft detected the primary language as Python with 96.875000% certainty.
---> Ready to sail
-```
-
-You are now ready to Draft Up your environment to the Kubernetes cluster.
-
-```
-draft up
-Draft Up Started: 'eponymous-lion'
-eponymous-lion: Building Docker Image: SUCCESS ⚓  (1.0004s)
-eponymous-lion: Pushing Docker Image: SUCCESS ⚓  (43.0938s)
-eponymous-lion: Releasing Application: SUCCESS ⚓  (6.1915s)
-eponymous-lion: Build ID: 01BS8WEYATJRXWR24SF5608TY0
-Releasing Application: started
-Releasing Application: Upgrading eponymous-lion.
-Releasing Application: eponymous-lion DEPLOYED
-Releasing Application: notes:
-  http://eponymous-lion.apps.inkl.in to access your application
-
-Releasing Application: success
-```
-
-Any changes the (in this Python example) to the app.py file will trigger another build and deployment to the Kubernetes environment.
 
 ### View container telemetry in Application Insights
 
