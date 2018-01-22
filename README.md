@@ -10,6 +10,7 @@ This intro lab serves to guide you on a few ways you can deploy a container on A
 *	Deploy a managed Kubernetes cluster on Azure using Azure Kubernetes Service (AKS) and deploy our container onto it
 * Write to Azure Cosmos DB. [Cosmos DB](https://azure.microsoft.com/en-us/services/cosmos-db/) is Microsoft's globally distributed, multi-model database 
 * Use [Application Insights](https://azure.microsoft.com/en-us/services/application-insights/) to track custom events in the container
+* Breaking things... intentionally...
 * Deploy Helm to your Kubernetes cluster
 <br><br>
 # Technology used
@@ -269,7 +270,11 @@ Ensure you add ```/swagger``` on to the end of the URL to access the Swagger API
 
 ### Stream the logs from the App Service container
 
-To see the log stream of your container running in the web app, navigate to: ```https://<youruniquewebappname>.scm.azurewebsites.net/api/logstream```
+To see the log stream of your container running in the web app, navigate to:
+```
+https://<youruniquewebappname>.scm.azurewebsites.net/api/logstream
+```
+
 <br><br>
 ## 7. Deploy the container to Azure Container Instance
 
@@ -374,15 +379,15 @@ We can then verify the connection by taking a look at the Worker nodes in the cl
 ```
 kubectl get nodes
 ```
-<br><br>
+<br>
 ### Verifying using the Kubernetes dashboard UI
 
-You can also now access the Kubernetes dashboard UI.  Enter the following at your command prompt (the link should automatically be opened but, if not, please browse to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/kubernetes-dashboard/proxy/ using a browser on your 'Mgmt VM'):
+You can also now access the Kubernetes dashboard UI.  Enter the following at your command prompt (the link should automatically opened after hitting enter but, if not, please browse to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/kubernetes-dashboard/proxy/ using a browser on your 'Mgmt VM'):
 
 ```
 az aks browse -g <yourresourcegroupk8> -n <youraksname>
 ```
-<br><br>
+<br>
 ##### Note.
 It is always a good idea to apply an auto shutdown policy to your VMs to avoid unnecessary costs for a test cluster, you can do this in the portal by navigating to the VMs provisioned within your resource group <yourresourcegroupk8> and navigating to the Auto Shutdown section for each one, see below:
 
@@ -413,11 +418,11 @@ spec:
         image: <containerregistry>.azurecr.io/go_order_sb
         env:
         - name: DATABASE
-          value: "<your cosmodb username from step 1>""
+          value: "<your cosmodb username from step 1>"
         - name: PASSWORD
-          value: "<your cosmodb password from step 1>""
+          value: "<your cosmodb password from step 1>"
         - name: INSIGHTSKEY
-          value: ""<you app insights key from step 2>""
+          value: ""<you app insights key from step 2>"
         - name: SOURCE
           value: "K8"
         ports:
@@ -456,7 +461,11 @@ You should get a success message that a deployment and service has been created.
 <br><br>
 You can now navigate to http://k8serviceendpoint:8080/swagger and test your API
 <br><br>
-## 8. Deploy the container to an Azure Container Engine and manage it from within your Kubernetes cluster
+
+## 8. Richard to break things and scale nodes up-and-down (let's see what happens!)
+
+<br><br>
+## 9. Deploy the container to an Azure Container Engine and manage it from within your Kubernetes cluster
 
 Now we will deploy our container to Azure Container Instances and use the [ACI connector](https://github.com/azure/aci-connector-k8s) to manage it from within our Kubernetes cluster.
 
@@ -583,7 +592,7 @@ ingress-traefik   10.0.98.22   23.101.66.197   80:31765/TCP,443:31391/TCP   10h
 kubernetes        10.0.0.1     <none>          443/TCP                      13h
 ```
 
-
+<br><br>
 ### View container telemetry in Application Insights
 
 The container we have deployed writes simple events to Application Insights with a time stamp but we could write much richer metrics. Application Insights provides a number of prebuilt dashboards to view application statistics alongside a query tool for getting deep custom insights. For the purposes of this intro we will simply expose the custom events we have tracked, namely the commit to the Azure CosmosDB.
