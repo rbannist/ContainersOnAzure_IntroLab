@@ -88,6 +88,7 @@ See below:
 Once Application Insights is provisioned, we need to get the Instrumentation key, this may be found in the Overview section. We will need this to run our container, so copy it for convenient access. See below:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/AppKey.png)
+
 <br><br>
 ## 3. Provisioning an Azure Container Registry instance
 
@@ -152,13 +153,13 @@ If you wish to explore docker host's networks enter the following commands
 ```
 sudo docker network ls
 
-sudo docker network inspect <bridgenetworkid> | <hostnetworkid>
+sudo docker network inspect [<bridgenetworkid> | <hostnetworkid>]
 ```
 
-If all goes well, you should see the application running on <dockervmipaddress>:8080.  'ifconfig -a' on the Docker VM will give you the IP address that you need.  See below for an example:
+If all goes well, you should see the application running on (dockervmipaddress):8080.  'ifconfig -a' on the Docker VM will give you the IP address that you need.  See below for an example:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/localrun.png)
 
-Now you can navigate to <dockervmipaddress>:8080/swagger and test the api. Select the 'POST' /order/ section, select the button "Try it out" and enter some values in the json provided and select "Execute", see below:
+Now you can navigate to (dockervmipaddress):8080/swagger and test the api. Select the 'POST' /order/ section, select the button "Try it out" and enter some values in the json provided and select "Execute", see below:
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/swagger.png)
 
 If the request succeeded, you will get a CosmosDB Id returned for the order you have just placed, see below:
@@ -338,10 +339,11 @@ az container show -n go-order-sb -g <yourACIresourcegroup> -o table
 ```
 
 Once the container has moved to "Succeeded" state you will see your external IP address under the "IP:ports" column, copy this value and navigate to http://yourACIExternalIP:8080/swagger and test your API like before.
+
 <br><br>
 ## 8. Deploy the container to an Azure Kubernetes Service (AKS) cluster
 
-In this exercise we will deploy an Azure Kubernetes Service (AKS) cluster.  AKS provides a managed Kubernetes environment on Azure.  We will run a container using our image on a newly provisioned Kubernetes cluster.
+In this exercise we will deploy an Azure Kubernetes Service (AKS) cluster.  AKS provides a managed Kubernetes environment on Azure.  'Master' nodes (managed) are 'free' and managed by Microsoft and 'Worker' nodes are exposed. We will run a container using our image on a newly provisioned Kubernetes cluster.
 
 We will start by once again creating a resource group for our cluster.  In a command window enter the following:
 
@@ -367,104 +369,63 @@ Once the deployment has completed, you will be able to connect to your new clust
 az aks get-credentials -g <yourresouregroupk8> -n <youraksname>
 ```
 
-<br><br>
-We can then take a look at the nodes in the cluster:
+We can then verify the connection by taking a look at the Worker nodes in the cluster using the following command:
 
 ```
 kubectl get nodes
 ```
+<br><br>
+### Verifying using the Kubernetes dashboard UI
 
-### Register our Azure Container Registry within Kubernetes
-
-We now want to register our private Azure Container Registry with our Kubernetes cluster to ensure that we can pull images from it. Enter the following within your command window:
-
-```
-kubectl create secret docker-registry <yourcontainerregistryinstance>.azurecr.io --docker-server=<yourcontainerregistryinstance>.azurecr.io --docker-username=<yourcontainerregistryinstanceusername> --docker-password=<yourcontainerregistryinstancepassword> --docker-email=<youremailaddress>
-```
-
-### You can verify the configuration by setting up access to teh Kubernetes UI
-
-Enter the following at your command prompt (the link should automatically be opened but, if not, please browse to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/kubernetes-dashboard/proxy/)
+You can also now access the Kubernetes dashboard UI.  Enter the following at your command prompt (the link should automatically be opened but, if not, please browse to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/kubernetes-dashboard/proxy/):
 
 ```
 az aks browse -g <yourresourcegroupk8> -n <youraksname>
 ```
-
-Click on 'Secrets' under the 'Config and Storage' section to see your entry
-
-
-### Associate the environment variables with container we want to deploy to Kubernetes
-
-We will now deploy our container via a yaml file, which is [here](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/go_order_sb.yaml) but before we do, we need to edit this file to ensure we set our environment variables and ensure that you have set your private Azure Container Registry correctly.  Add the following after editing, save ('Ctrl+o), and exit ('Ctrl+x):
-
-```
-
-apiVersion: apps/v1beta1
-kind: Deployment
-metadata:
-  name: goordersb
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: goordersb
-    spec:
-      containers:
-      - name: goordersb
-        image: <yourcontainerregistryinstance>.azurecr.io/go_order_sb
-        ports:
-        - containerPort: 8080
-          name: goordersb
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: goordersb
-spec:
-  type: LoadBalancer
-  ports:
-  - port: 8080
-  selector:
-    app: goordersb
----
-
-```
-
-
-
-And test that it's working:
-
-```
-touch goordersb.yaml
-```
-
-```
-nano goordersb.yaml
-```
-
-kubectl create -f goordersb.yaml
-
-kubectl get service goordersb --watch
---> Wait for 'EXTERNAL-IP'
-
-
-And to access your Kubernetes graphical dashboard enter:
-
-```
-az acs kubernetes browse -g <yourresourcegroupk8> -n <yourk8cluster> 
-```
-
-Note, it is always a good idea to apply an auto shutdown policy to your VMs to avoid unnecessary costs for a test cluster, you can do this in the portal by navigating to the VMs provisioned within your resource group <yourresourcegroupk8> and navigating to the Auto Shutdown section for each one, see below:
+<br><br>
+##### Note.
+It is always a good idea to apply an auto shutdown policy to your VMs to avoid unnecessary costs for a test cluster, you can do this in the portal by navigating to the VMs provisioned within your resource group <yourresourcegroupk8> and navigating to the Auto Shutdown section for each one, see below:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/autoshutdown.png)
+<br><br>
+### Register our Azure Container Registry within Kubernetes
 
+We now want to register our private Azure Container Registry with our Kubernetes cluster to ensure that we can pull images from it. Enter the following in your command window:
 
-In the Kubernetes dashboard you should now see this created within the secrets section:
+```
+kubectl create secret docker-registry <yourcontainerregistryinstance>.azurecr.io --docker-server=<yourcontainerregistryinstance>.azurecr.io --docker-username=<yourcontainerregistryinstanceusername> --docker-password=<yourcontainerregistryinstancepassword> --docker-email=<youremailaddress>
+```
+<br><br>
+
+In the Kubernetes dashboard you should now see this created within the 'Secrets' section.  Click on 'Secrets' under the 'Config and Storage' section to see your new entry:
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/K8secrets.png)
+<br><br>
+### Associate the environment variables with container that we want to deploy to Kubernetes
 
+We will now deploy our container via a yaml file, which is [here](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/go_order_sb.yaml). However, before we do, we need to edit this file to ensure we set our environment variables and ensure that you have set your private Azure Container Registry correctly.  Fill out the relevant lines and then save the file to your user profile directory as 'goordersb.yaml'.
 
+```
+
+spec:
+      containers:
+      - name: goordersb
+        image: <containerregistry>.azurecr.io/go_order_sb
+        env:
+        - name: DATABASE
+          value: "<your cosmodb username from step 1>""
+        - name: PASSWORD
+          value: "<your cosmodb password from step 1>""
+        - name: INSIGHTSKEY
+          value: ""<you app insights key from step 2>""
+        - name: SOURCE
+          value: "K8"
+        ports:
+        - containerPort: 8080
+      imagePullSecrets:
+        - name: <yourcontainerregistry>
+
+```
 
 
 Once the yaml file has been updated, we can now deploy our container. Within the command line enter the following:
@@ -472,20 +433,24 @@ Once the yaml file has been updated, we can now deploy our container. Within the
 ```
 kubectl create -f ./<your path>/go_order_sb.yaml
 ```
-You should get a success message that a deployment and service has been created. Navigate back to the Kubernetes dashboard and you should see the following:
 
+kubectl get service goordersb --watch
+--> Wait for 'EXTERNAL-IP'
+
+You should get a success message that a deployment and service has been created. Navigate back to the Kubernetes dashboard and you should see the following:
+<br><br>
 #### Your deployments running 
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/k8deployments.png)
-
+<br><br>
 #### Your three pods
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/k8pods.png)
-
+<br><br>
 #### Your service and external endpoint
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/k8service.png)
-
+<br><br>
 You can now navigate to http://k8serviceendpoint:8080/swagger and test your API
 <br><br>
 ## 8. Deploy the container to an Azure Container Engine and manage it from within your Kubernetes cluster
