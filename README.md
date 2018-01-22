@@ -166,7 +166,7 @@ If the request succeeded, you will get a CosmosDB Id returned for the order you 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/swaggerresponse.png)
 
 
-You can also test using CURL on the Mgmt/Windows VM.  Firsty, install CURL:
+You can also test using CURL on the Mgmt/'Mgmt VM'.  Firsty, install CURL:
 
 ```
 choco install curl -y
@@ -357,7 +357,7 @@ AKS provides a highly-simplified Kubernetes cluster deployment proces.  One comm
 az aks create -n <youraksname> -g <yourresouregroupk8>
 ```
 
-The kubernetes client should already be installed on your Windows VM but if you ever need to install it this command will do that for you:
+The kubernetes client should already be installed on your 'Mgmt VM' but, should you ever need to install it, this command will do that for you:
 
 ```
 az aks install-cli
@@ -377,7 +377,7 @@ kubectl get nodes
 <br><br>
 ### Verifying using the Kubernetes dashboard UI
 
-You can also now access the Kubernetes dashboard UI.  Enter the following at your command prompt (the link should automatically be opened but, if not, please browse to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/kubernetes-dashboard/proxy/):
+You can also now access the Kubernetes dashboard UI.  Enter the following at your command prompt (the link should automatically be opened but, if not, please browse to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/kubernetes-dashboard/proxy/ using a browser on your 'Mgmt VM'):
 
 ```
 az aks browse -g <yourresourcegroupk8> -n <youraksname>
@@ -390,7 +390,7 @@ It is always a good idea to apply an auto shutdown policy to your VMs to avoid u
 <br><br>
 ### Register our Azure Container Registry within Kubernetes
 
-We now want to register our private Azure Container Registry with our Kubernetes cluster to ensure that we can pull images from it. Enter the following in your command window:
+We now want to register our private Azure Container Registry on our Kubernetes cluster to ensure that we can pull images from it. Enter the following in your command window:
 
 ```
 kubectl create secret docker-registry <yourcontainerregistryinstance>.azurecr.io --docker-server=<yourcontainerregistryinstance>.azurecr.io --docker-username=<yourcontainerregistryinstanceusername> --docker-password=<yourcontainerregistryinstancepassword> --docker-email=<youremailaddress>
@@ -401,9 +401,9 @@ In the Kubernetes dashboard you should now see this created within the 'Secrets'
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/K8secrets.png)
 <br><br>
-### Associate the environment variables with container that we want to deploy to Kubernetes
+### Associate the environment variables with the container that we want to deploy to Kubernetes
 
-We will now deploy our container via a yaml file, which is [here](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/go_order_sb.yaml). However, before we do, we need to edit this file to ensure we set our environment variables and ensure that you have set your private Azure Container Registry correctly.  Fill out the relevant lines and then save the file to your user profile directory as 'goordersb.yaml'.
+We will now deploy our container via a yaml file, which is [here](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/go_order_sb.yaml). However, before we do, we need to edit this file to ensure we set our environment variables and ensure that you have set your private Azure Container Registry correctly.  Fill out the relevant lines and then save the file to your user profile directory as 'go_order_sb.yaml'.
 
 ```
 
@@ -434,8 +434,11 @@ Once the yaml file has been updated, we can now deploy our container. Within the
 kubectl create -f ./<your path>/go_order_sb.yaml
 ```
 
+Use the following command to wait for the service to be fully provisioned ('EXTERNAL-IP' from 'pending' to <i>an ip address</i>):
+```
 kubectl get service goordersb --watch
---> Wait for 'EXTERNAL-IP'
+```
+'Ctrl+c' to break.
 
 You should get a success message that a deployment and service has been created. Navigate back to the Kubernetes dashboard and you should see the following:
 <br><br>
