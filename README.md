@@ -339,9 +339,9 @@ az container show -n go-order-sb -g <yourACIresourcegroup> -o table
 
 Once the container has moved to "Succeeded" state you will see your external IP address under the "IP:ports" column, copy this value and navigate to http://yourACIExternalIP:8080/swagger and test your API like before.
 <br><br>
-## 8. Deploy the container to an Azure Kubernetes Service cluster
+## 8. Deploy the container to an Azure Kubernetes Service (AKS) cluster
 
-In this exercise we will deploy an Azure Kubernetes Service (AKS) cluster.  AKS provides a managed Kubernetes environment on Azure.  We will run our container on a newly provisioned Kubernetes cluster.  Note. Please note the use of Cloud Shell during this exercise as there appears to be bug in the Azure-CLI version installed on your Windows VM.
+In this exercise we will deploy an Azure Kubernetes Service (AKS) cluster.  AKS provides a managed Kubernetes environment on Azure.  We will run a container using our image on a newly provisioned Kubernetes cluster.
 
 We will start by once again creating a resource group for our cluster.  In a command window enter the following:
 
@@ -354,20 +354,19 @@ AKS provides a highly-simplified Kubernetes cluster deployment proces.  One comm
 ```
 az aks create -n <youraksname> -g <yourresouregroupk8>
 ```
-Here is what things should look like in the portal:
-![alt text](https://github.com/rbannist/ContainersOnAzure_IntroLab/images/AKS1.png)
 
-The kubernetes client should already be installed on your Windows VM and in the Cloud Shell but if you need to install it this command will do that for you:
+The kubernetes client should already be installed on your Windows VM but if you ever need to install it this command will do that for you:
 
 ```
 az aks install-cli
 ```
 
-Once the deployment has completed please move to the Cloud Shell.  You will be able to connect to your new cluster using the following command:
+Once the deployment has completed, you will be able to connect to your new cluster using the following command:
 
 ```
-az aks get-credentials --resource-group <yourresouregroupk8> --name <youraksname>
+az aks get-credentials -g <yourresouregroupk8> -n <youraksname>
 ```
+
 <br><br>
 We can then take a look at the nodes in the cluster:
 
@@ -375,17 +374,28 @@ We can then take a look at the nodes in the cluster:
 kubectl get nodes
 ```
 
-And test that it's working:
+### Register our Azure Container Registry within Kubernetes
+
+We now want to register our private Azure Container Registry with our Kubernetes cluster to ensure that we can pull images from it. Enter the following within your command window:
 
 ```
-touch goordersb.yaml
+kubectl create secret docker-registry <yourcontainerregistryinstance>.azurecr.io --docker-server=<yourcontainerregistryinstance>.azurecr.io --docker-username=<yourcontainerregistryinstanceusername> --docker-password=<yourcontainerregistryinstancepassword> --docker-email=<youremailaddress>
 ```
 
+### You can verify the configuration by setting up access to teh Kubernetes UI
+
+Enter the following at your command prompt (the link should automatically be opened but, if not, please browse to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/kubernetes-dashboard/proxy/)
+
 ```
-nano goordersb.yaml
+az aks browse -g <yourresourcegroupk8> -n <youraksname>
 ```
 
-Add the following after editing, save ('Ctrl+o), and exit ('Ctrl+x):
+Click on 'Secrets' under the 'Config and Storage' section to see your entry
+
+
+### Associate the environment variables with container we want to deploy to Kubernetes
+
+We will now deploy our container via a yaml file, which is [here](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/go_order_sb.yaml) but before we do, we need to edit this file to ensure we set our environment variables and ensure that you have set your private Azure Container Registry correctly.  Add the following after editing, save ('Ctrl+o), and exit ('Ctrl+x):
 
 ```
 
@@ -421,26 +431,22 @@ spec:
 
 ```
 
-Next, we need to establish a connection to our Container Registry in order to be able to pull the image that we need:
+
+
+And test that it's working:
 
 ```
-kubectl create secret docker-registry <yourcontainerregistryinstance>.azurecr.io --docker-server=<yourcontainerregistryinstance>.azurecr.io --docker-username=<yourcontainerregistryinstanceusername> --docker-password=<yourcontainerregistryinstancepassword> --docker-email=<youremailaddress>
+touch goordersb.yaml
 ```
 
+```
+nano goordersb.yaml
+```
 
 kubectl create -f goordersb.yaml
 
 kubectl get service goordersb --watch
 --> Wait for 'EXTERNAL-IP'
-
-
-
-
-Upon receiving your "provisioningState": "Succeeded" json response, enter the following:
-
-```
-az acs create --orchestrator-type kubernetes --resource-group <yourresourcegroupk8> --name <yourk8cluster> --generate-ssh-keys
-```
 
 
 And to access your Kubernetes graphical dashboard enter:
@@ -453,13 +459,6 @@ Note, it is always a good idea to apply an auto shutdown policy to your VMs to a
 
 ![alt text](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/images/autoshutdown.png)
 
-### Register our Azure Container Registry within Kubernetes
-
-We now want to register our private Azure Container Registry with our Kubernetes cluster to ensure that we can pull images from it. Enter the following within your command window:
-
-```
-kubectl create secret docker-registry <yourcontainerregistryinstance>.azurecr.io --docker-server=<yourcontainerregistryinstance>.azurecr.io --docker-username=<youracradminusername> --docker-password=<youracradminpassword> --docker-email=<youremailaddress>
-```
 
 In the Kubernetes dashboard you should now see this created within the secrets section:
 
@@ -467,30 +466,6 @@ In the Kubernetes dashboard you should now see this created within the secrets s
 
 
 
-### Associate the environment variables with container we want to deploy to Kubernetes
-
-We will now deploy our container via a yaml file, which is [here](https://github.com/shanepeckham/ContainersOnAzure_IntroLab/blob/master/go_order_sb.yaml) but before we do, we need to edit this file to ensure we set our environment variables and ensure that you have set your private Azure Container Registry correctly:
-
-```
-
-spec:
-      containers:
-      - name: goordersb
-        image: <containerregistry>.azurecr.io/go_order_sb
-        env:
-        - name: DATABASE
-          value: "<your cosmodb username from step 1>""
-        - name: PASSWORD
-          value: "<your cosmodb password from step 1>""
-        - name: INSIGHTSKEY
-          value: ""<you app insights key from step 2>""
-        - name: SOURCE
-          value: "K8"
-        ports:
-        - containerPort: 8080
-      imagePullSecrets:
-        - name: <yourcontainerregistry>
-```
 
 Once the yaml file has been updated, we can now deploy our container. Within the command line enter the following:
 
