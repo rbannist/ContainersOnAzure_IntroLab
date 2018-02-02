@@ -117,10 +117,6 @@ az acr create -n <youracrname> -g <yourresourcegroup> --sku Basic --admin-enable
 ```
 
 ```
-az ad sp create-for-rbac --scopes /subscriptions/<yoursubsriptionid>/resourceGroups/<yourresourcegroup>/providers/Microsoft.ContainerRegistry/registries/<youracrname> --role Owner --password <yourpassword>
-```
-
-```
 az acr show -n <youracrname> --query loginServer
 ```
 
@@ -131,7 +127,7 @@ az acr show -n <youracrname> --query loginServer
 Open up your docker machine in Guacamole and type the following:
 
 ```
-docker pull shanepeckham/go_order_sb
+sudo docker pull shanepeckham/go_order_sb
 ```
 
 We will now test the image locally to ensure that it is working and connecting to our CosmosDB and Application Insights instances. The keys you copied for the DB and App Insights keys are set as environment variables within the container, so we will need to ensure we populate these.
@@ -179,6 +175,9 @@ Then send a POST call:
 curl -X POST "http://<dockervmipaddress>:8080/v1/order/" -H  "accept: application/json" -H  "content-type: application/json" -d "{  \"EmailAddress\": \"<emailaddress<>\",  \"ID\": \"string\",  \"PreferredLanguage\": \"ENU\",  \"Product\": \"Latte\",  \"Source\": \"Localhost\",  \"Total\": 1}"
 ```
 <br><br>
+
+Enter 'Ctrl + C' to shutdown the running container before moving on.
+
 We can now go and query CosmosDB to check our entry there, in the Azure portal, navigate back to your Cosmos DB instance and go to the section Data Explorer. We can now query for the order(s) that we placed. A collection called 'orders' will have been created within your database, you can then apply a filter for the id we created, namely:
 
 ```
@@ -198,7 +197,7 @@ Navigate to the Azure Container Registry instance you provisioned within the Azu
 Now we will push the image up to the Azure Container Registry, enter the following (from the quickstart screen):
 
 ``` 
-docker login <yourcontainerregistryinstance>.azurecr.io
+sudo docker login <yourcontainerregistryinstance>.azurecr.io -u <your acr admin username> -p <your acr admin password>
 ```
 
 To get the username and password, navigate to the *Access Keys* blade, see below:
@@ -207,8 +206,8 @@ To get the username and password, navigate to the *Access Keys* blade, see below
 
 You will receive a 'Login Succeeded' message. Now type the following:
 ```
-docker tag shanepeckham/go_order_sb <yourcontainerregistryinstance>.azurecr.io/go_order_sb
-docker push <yourcontainerregistryinstance>.azurecr.io/go_order_sb
+sudo docker tag shanepeckham/go_order_sb <yourcontainerregistryinstance>.azurecr.io/go_order_sb
+sudo docker push <yourcontainerregistryinstance>.azurecr.io/go_order_sb
 ```
 Once this has completed, you will be able to see your container uploaded to the Container Registry within the portal, see below:
 
